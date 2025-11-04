@@ -415,9 +415,9 @@ function tap_reporter
     return $exit_code
 end
 
-# Automatically run tap_reporter if not sourced interactively
-# When sourced for testing, functions are available but not executed
-if not status is-command-substitution
-    and not status is-interactive
+# Only run tap_reporter if there's input from a pipe and not interactive
+# This allows the module to be sourced for testing without blocking
+if not status is-interactive
+    and test -p /dev/stdin
     tap_reporter
 end
