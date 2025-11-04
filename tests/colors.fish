@@ -6,15 +6,6 @@ set --local project_root (dirname $test_dir)
 
 source $project_root/functions/tap.fish
 
-# Test: Color functions exist and are callable
-@test "color_green function exists" -n (functions _color_green)
-@test "color_red function exists" -n (functions _color_red)
-@test "color_blue function exists" -n (functions _color_blue)
-@test "color_yellow function exists" -n (functions _color_yellow)
-@test "color_magenta function exists" -n (functions _color_magenta)
-@test "color_dim function exists" -n (functions _color_dim)
-@test "color_white function exists" -n (functions _color_white)
-
 # Test: Color functions return output with ANSI codes
 @test "color_green outputs" -n (_color_green "test")
 @test "color_red outputs" -n (_color_red "test")
