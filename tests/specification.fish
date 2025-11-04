@@ -1,6 +1,5 @@
 #!/usr/bin/env fish
 # TAP specification compliance tests
-# Tests for TAP version 14 specification compliance
 
 set --local test_dir (dirname (realpath (status filename)))
 set --local project_root (dirname $test_dir)
@@ -10,57 +9,26 @@ source $project_root/functions/tap.fish
 # TAP Version 14 Specification Tests
 # Reference: https://testanything.org/tap-version-14-specification.html
 
-@test "TAP output contains version line" (
-    echo "TAP version 14" | grep -q 'version 14'
-    echo $status
-)
+@test "TAP version line format" (echo "TAP version 14") = "TAP version 14"
 
-@test "Test line has valid number" (
-    echo "ok 1" | grep -qE '^(ok|not ok) [0-9]+' 
-    echo $status
-)
+@test "ok test line format" (echo "ok 1") -q
 
-@test "Test line with description" (
-    echo "ok 1 - description here" | grep -qE '^ok [0-9]+ - '
-    echo $status
-)
+@test "ok test line with description" (echo "ok 1 - test passed" | grep -q 'ok 1 -'; echo $status) -eq 0
 
-@test "Failed test line format" (
-    echo "not ok 2 - test failed" | grep -qE '^not ok [0-9]+ - '
-    echo $status
-)
+@test "not ok test line format" (echo "not ok 2" | grep -q 'not ok'; echo $status) -eq 0
 
-@test "Test plan format is valid" (
-    echo "1..10" | grep -qE '^[0-9]+\.\.[0-9]+$'
-    echo $status
-)
+@test "not ok test with description" (echo "not ok 2 - test failed" | grep -q 'not ok 2 -'; echo $status) -eq 0
 
-@test "Bail out message format" (
-    echo "Bail out! Database connection failed" | grep -qE '^Bail out! '
-    echo $status
-)
+@test "test plan format" (echo "1..10" | grep -qE '^[0-9]+\.\.[0-9]+'; echo $status) -eq 0
 
-@test "Diagnostic lines start with hash" (
-    echo "# Diagnostic message" | grep -qE '^# '
-    echo $status
-)
+@test "bail out message format" (echo "Bail out! Error message" | grep -q '^Bail out!'; echo $status) -eq 0
 
-@test "YAML block starts with indent and three dashes" (
-    echo "  ---" | grep -qE '^\s+---$'
-    echo $status
-)
+@test "diagnostic line starts with hash" (echo "# Diagnostic message" | grep -q '^#'; echo $status) -eq 0
 
-@test "YAML block ends with three dots" (
-    echo "  ..." | grep -qE '^\s+\.\.\.$'
-    echo $status
-)
+@test "YAML block start indicator" (echo "  ---" | grep -q '^\s*---'; echo $status) -eq 0
 
-@test "Test with TODO directive" (
-    echo "not ok 1 - skip this # TODO not implemented" | grep -q 'TODO'
-    echo $status
-)
+@test "YAML block end indicator" (echo "  ..." | grep -q '^\s*\.\.\.'; echo $status) -eq 0
 
-@test "Test with SKIP directive" (
-    echo "ok 1 - skipped test # SKIP platform not supported" | grep -q 'SKIP'
-    echo $status
-)
+@test "TODO directive in test line" (echo "not ok 1 # TODO fix this" | grep -q 'TODO'; echo $status) -eq 0
+
+@test "SKIP directive in test line" (echo "ok 1 # SKIP not ready" | grep -q 'SKIP'; echo $status) -eq 0

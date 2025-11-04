@@ -6,14 +6,7 @@ set --local project_root (dirname $test_dir)
 
 source $project_root/functions/tap.fish
 
-# Test: tap_reporter function exists
-@test "tap_reporter function exists" (
-    type -q tap_reporter
-    echo $status
-)
+# Test: tap_reporter function exists and is callable
+@test "tap_reporter function exists" -n (functions tap_reporter)
 
-# Test: tap_reporter is callable
-@test "tap_reporter is a valid function" (
-    functions tap_reporter >/dev/null 2>&1
-    echo $status
-)
+@test "tap_reporter is a function" (functions tap_reporter > /dev/null; echo $status) -eq 0

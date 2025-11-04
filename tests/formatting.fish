@@ -6,41 +6,19 @@ set --local project_root (dirname $test_dir)
 
 source $project_root/functions/tap.fish
 
-# Test: println function exists
-@test "println function exists" (
-    type -q _println
-    echo $status
-)
+# Test: println function exists and works
+@test "println function exists" -n (functions _println)
 
-# Test: println outputs text with newline
-@test "println outputs text" (
-    set --local output (_println "test message")
-    test -n "$output"
-    echo $status
-)
+@test "println outputs text" -n (_println "test message")
 
-# Test: format_ms function exists
-@test "format_ms function exists" (
-    type -q _format_ms
-    echo $status
-)
+# Test: format_ms function exists and converts time
+@test "format_ms function exists" -n (functions _format_ms)
 
-# Test: format_ms converts milliseconds
-@test "format_ms converts 1000ms to 1s" (
-    set --local output (_format_ms 1000)
-    echo "$output" | grep -q '1'
-    echo $status
-)
+@test "format_ms converts milliseconds" (string match -q "*s" (_format_ms 1000); echo $status) -eq 0
 
-# Test: format_ms handles zero
-@test "format_ms handles 0ms" (
-    set --local output (_format_ms 0)
-    test -n "$output"
-    echo $status
-)
+@test "format_ms handles zero" -n (_format_ms 0)
+
+@test "format_ms outputs milliseconds for small values" (string match -q "*ms" (_format_ms 500); echo $status) -eq 0
 
 # Test: highlight_diff function exists
-@test "highlight_diff function exists" (
-    type -q _highlight_diff
-    echo $status
-)
+@test "highlight_diff function exists" -n (functions _highlight_diff)
