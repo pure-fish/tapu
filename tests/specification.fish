@@ -11,7 +11,7 @@ source $project_root/functions/tap.fish
 
 @test "TAP version line format" (echo "TAP version 14") = "TAP version 14"
 
-@test "ok test line format" (echo "ok 1") -q
+@test "ok test line format" (echo "ok 1" | grep -q '^ok'; echo $status) -eq 0
 
 @test "ok test line with description" (echo "ok 1 - test passed" | grep -q 'ok 1 -'; echo $status) -eq 0
 
