@@ -15,11 +15,16 @@ source $project_root/functions/tap.fish
 @test "color_dim function exists" -n (functions _color_dim)
 @test "color_white function exists" -n (functions _color_white)
 
-# Test: Color functions output text
-@test "color_green outputs text" -n (_color_green "test")
-@test "color_red outputs text" -n (_color_red "test")
-@test "color_blue outputs text" -n (_color_blue "test")
-@test "color_yellow outputs text" -n (_color_yellow "test")
-@test "color_magenta outputs text" -n (_color_magenta "test")
-@test "color_dim outputs text" -n (_color_dim "test")
-@test "color_white outputs text" -n (_color_white "test")
+# Test: Color functions return output with ANSI codes
+@test "color_green outputs" -n (_color_green "test")
+@test "color_red outputs" -n (_color_red "test")
+@test "color_blue outputs" -n (_color_blue "test")
+@test "color_yellow outputs" -n (_color_yellow "test")
+@test "color_magenta outputs" -n (_color_magenta "test")
+@test "color_dim outputs" -n (_color_dim "test")
+@test "color_white outputs" -n (_color_white "test")
+
+# Test: Color outputs contain the input text
+@test "color_green contains text" (string match -q '*test*' (_color_green "test"); echo $status) -eq 0
+@test "color_red contains text" (string match -q '*test*' (_color_red "test"); echo $status) -eq 0
+@test "color_blue contains text" (string match -q '*test*' (_color_blue "test"); echo $status) -eq 0
