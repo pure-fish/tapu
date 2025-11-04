@@ -1,6 +1,5 @@
 # fish shell
 conf.d/
-functions/
 completions/
 
 # Dependencies

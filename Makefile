@@ -9,6 +9,7 @@ help:
 	@echo "  clean     Remove any temporary files"
 	@echo "  help      Display this help message"
 
+SHELL := /usr/bin/env fish
 test:
 	fishtape tests/*.fish
 
