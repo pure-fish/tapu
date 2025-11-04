@@ -1,0 +1,17 @@
+# fish shell
+conf.d/
+functions/
+completions/
+
+# Dependencies
+fisher_cache/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+
+# Local development
+*.local.fish
