@@ -50,6 +50,18 @@ function _color_white
     set_color normal
 end
 
+# Unescape TAP escape sequences (\# and \\)
+function _unescape_tap
+    set --local input "$argv[1]"
+    # Replace \\ with a placeholder first to avoid double-unescaping
+    set input (string replace -a '\\\\' '\x00' -- "$input")
+    # Replace \# with #
+    set input (string replace -a '\\#' '#' -- "$input")
+    # Replace placeholder back with single \
+    set input (string replace -a '\x00' '\\' -- "$input")
+    echo "$input"
+end
+
 # Print with indentation
 function _println
     set --local input "$argv[1]"
@@ -154,20 +166,111 @@ function tap_reporter
     set --local skip_count 0
     set --local todo_count 0
     set --local planned_tests 0
+    set --local plan_seen false
+    set --local plan_at_end false
     set --local current_test ''
     set --local in_yaml false
     set --local yaml_lines
     set --local exit_code 0
     set --local bailed_out false
+    set --local subtest_level 0
+    set --local in_subtest false
+    set --local subtest_name ''
+    set --local subtest_lines
+    set --local seen_test_ids
+    set --local test_ids_out_of_range
     
     # Read TAP input line by line
     while read -l line
+        # Calculate indentation level for subtest support
+        set --local indent_count 0
+        if string match -q -r '^\s+' "$line"
+            set indent_count (string length (string match -r '^(\s+)' "$line" | head -n 1))
+            # Only treat multiples of 4 spaces as subtest indentation
+            if test (math "$indent_count % 4") -eq 0
+                set --local new_level (math "$indent_count / 4")
+                # If we're entering a subtest
+                if test $new_level -gt 0 -a $in_subtest = false
+                    set in_subtest true
+                    set subtest_lines
+                end
+                set subtest_level $new_level
+            else
+                # Not a valid subtest indentation, treat as non-TAP
+                set subtest_level 0
+            end
+        else
+            set subtest_level 0
+        end
+        
+        # Remove leading spaces from line for parsing (we'll track level separately)
+        set --local unindented_line (string trim -l "$line")
+        
+        # Check for subtest comment marker at parent level
+        if test $subtest_level -eq 0 -a $in_subtest = false
+            if string match -q -r '^# Subtest:' "$unindented_line"
+                set subtest_name (string replace -r '^# Subtest:\s*' '' "$unindented_line" | string trim)
+                set in_subtest true
+                set subtest_lines
+                _println
+                if test -n "$subtest_name"
+                    _println "$(_color_blue "$subtest_name")" 1
+                end
+                continue
+            else if string match -q '^# Subtest$' "$unindented_line"
+                set subtest_name ''
+                set in_subtest true
+                set subtest_lines
+                _println
+                continue
+            end
+        end
+        
+        # If we're in a subtest
+        if test $in_subtest = true
+            # If we hit a non-indented line and we have subtest content, this should be the correlated test point
+            if test $subtest_level -eq 0
+                # This should be the correlated test point
+                if string match -q -r '^(not )?ok' "$unindented_line"
+                    # Process the subtest lines we collected
+                    # For now, we'll just validate they exist and count them
+                    # A full implementation would recursively parse the subtest
+                    set --local subtest_test_count 0
+                    set --local subtest_pass_count 0
+                    set --local subtest_fail_count 0
+                    
+                    for subtest_line in $subtest_lines
+                        set --local sub_unindented (string trim -l "$subtest_line")
+                        if string match -q -r '^ok' "$sub_unindented"
+                            set subtest_test_count (math "$subtest_test_count + 1")
+                            set subtest_pass_count (math "$subtest_pass_count + 1")
+                        else if string match -q -r '^not ok' "$sub_unindented"
+                            set subtest_test_count (math "$subtest_test_count + 1")
+                            set subtest_fail_count (math "$subtest_fail_count + 1")
+                        end
+                    end
+                    
+                    # Now process the correlated test point
+                    set in_subtest false
+                    set subtest_name ''
+                    # Don't continue - let it fall through to normal test point processing
+                else
+                    # Non-TAP line between subtest and correlated test point
+                    # According to spec, treat as non-TAP
+                    continue
+                end
+            else
+                # We're inside the subtest, collect the lines
+                set -a subtest_lines "$line"
+                continue
+            end
+        end
+        
         # Handle Bail out!
-        if string match -q -r -i '^Bail out!' "$line"
-            set --local reason (string replace -r -i '^Bail out!\s*' '' "$line" | string trim)
+        if string match -q -r -i '^Bail out!' "$unindented_line"
+            set --local reason (string replace -r -i '^Bail out!\s*' '' "$unindented_line" | string trim)
             # Unescape \# and \\
-            set reason (string replace -a '\\#' '#' "$reason")
-            set reason (string replace -a '\\\\' '\\' "$reason")
+            set reason (_unescape_tap "$reason")
             _println
             _println "$(_color_red "Bail out!") $reason"
             _println
@@ -177,11 +280,11 @@ function tap_reporter
         end
         
         # Handle YAML blocks (diagnostic info)
-        if string match -q '  ---' "$line"
+        if string match -q '  ---' "$unindented_line"
             set in_yaml true
             set yaml_lines
             continue
-        else if string match -q '  ...' "$line"
+        else if string match -q '  ...' "$unindented_line"
             set in_yaml false
             
             # Parse YAML for failure details (support common field names)
@@ -248,14 +351,14 @@ function tap_reporter
         end
         
         # Parse TAP version
-        if string match -q -r '^TAP version' "$line"
+        if string match -q -r '^TAP version' "$unindented_line"
             # Just skip version line, don't display it
             continue
         end
         
         # Parse TAP comment (test name or subtest marker)
-        if string match -q '# *' "$line"
-            set current_test (string replace '# ' '' "$line" | string trim)
+        if string match -q '# *' "$unindented_line"
+            set current_test (string replace '# ' '' "$unindented_line" | string trim)
             
             # Skip summary comments (fishtape adds these)
             if string match -q 'tests *' "$current_test"; or \
@@ -283,40 +386,84 @@ function tap_reporter
         end
         
         # Parse TAP ok/not ok lines
-        if string match -q -r '^ok' "$line"; or string match -q -r '^not ok' "$line"
+        if string match -q -r '^ok' "$unindented_line"; or string match -q -r '^not ok' "$unindented_line"
+            # Check if plan already seen and this is after end plan
+            if test $plan_at_end = true
+                _println "$(_color_red "Error: Test point after final plan")"
+                set exit_code 1
+            end
+            
             set test_count (math "$test_count + 1")
             
-            set --local is_ok (string match -q -r '^ok' "$line"; and echo true; or echo false)
+            set --local is_ok (string match -q -r '^ok' "$unindented_line"; and echo true; or echo false)
             
             # Remove leading "ok" or "not ok" and optional number
-            set --local test_line (string replace -r '^(not )?ok( [0-9]+)?' '' "$line" | string trim)
+            set --local test_line (string replace -r '^(not )?ok( [0-9]+)?' '' "$unindented_line" | string trim)
             
-            # Check for directives (TODO/SKIP) - case insensitive, after #
+            # Extract test ID if present
+            set --local test_id ''
+            if string match -q -r '^(not )?ok [0-9]+' "$unindented_line"
+                set test_id (string replace -r '^(not )?ok ([0-9]+).*' '$2' "$unindented_line")
+                
+                # Check for duplicate test IDs
+                if contains $test_id $seen_test_ids
+                    _println "$(_color_yellow "Warning: Duplicate test ID $test_id")" >&2
+                end
+                set -a seen_test_ids $test_id
+                
+                # Validate test ID is within plan range (if plan seen)
+                if test $plan_seen = true -a $planned_tests -gt 0
+                    if test $test_id -lt 1 -o $test_id -gt $planned_tests
+                        _println "$(_color_red "Error: Test ID $test_id outside plan range 1..$planned_tests")" >&2
+                        set exit_code 1
+                        set -a test_ids_out_of_range $test_id
+                    end
+                end
+            end
+            
+            # Check for directives (TODO/SKIP) - case insensitive, after unescaped #
+            # First, we need to find unescaped # characters
             set --local directive ''
             set --local directive_reason ''
             set --local description "$test_line"
             
-            # Match directive: \s+#\s*(SKIP|TODO)\S*\s+(.*)
-            # Check if there's a # in the line
-            if string match -q '*#*' -- "$test_line"
-                # Split on ' # ' (space hash space)
-                if string match -q '* # *' -- "$test_line"
-                    set --local parts (string split -m 1 ' # ' -- "$test_line")
-                    if test (count $parts) -eq 2
-                        set description "$parts[1]"
-                        set --local directive_part "$parts[2]"
-                        
-                        # Check for TODO or SKIP at start (case insensitive)
-                        if string match -q -r -i '^(todo|skip)' -- "$directive_part"
-                            # Extract directive type (TODO or SKIP)
-                            if string match -q -i 'todo*' -- "$directive_part"
-                                set directive 'TODO'
-                            else if string match -q -i 'skip*' -- "$directive_part"
-                                set directive 'SKIP'
-                            end
-                            # Extract reason after TODO/SKIP
-                            set directive_reason (string replace -r -i '^(todo|skip)\S*\s*' '' -- "$directive_part" | string trim)
+            # Find the position of the first unescaped # preceded by whitespace
+            # We need to handle escaping properly
+            set --local temp_line "$test_line"
+            set --local found_directive false
+            
+            # Replace escaped sequences temporarily to find real delimiters
+            set temp_line (string replace -a '\\\\' '\x00' -- "$temp_line")
+            set temp_line (string replace -a '\\#' '\x01' -- "$temp_line")
+            
+            # Now look for ' # ' pattern (space-hash-space)
+            if string match -q '* # *' -- "$temp_line"
+                set found_directive true
+                # Split on the first ' # ' in the temp line to find position
+                set --local parts (string split -m 1 ' # ' -- "$temp_line")
+                if test (count $parts) -eq 2
+                    # Now split the original line at the same position
+                    # Count chars in first part to find split point
+                    set --local split_len (string length -- "$parts[1]")
+                    set description (string sub -l $split_len -- "$test_line")
+                    set --local directive_part (string sub -s (math "$split_len + 4") -- "$test_line")
+                    
+                    # Check for TODO or SKIP at start (case insensitive)
+                    if string match -q -r -i '^(todo|skip)' -- "$directive_part"
+                        # Extract directive type (TODO or SKIP)
+                        if string match -q -i 'todo*' -- "$directive_part"
+                            set directive 'TODO'
+                        else if string match -q -i 'skip*' -- "$directive_part"
+                            set directive 'SKIP'
                         end
+                        # Extract reason after TODO/SKIP\S*\s+
+                        set directive_reason (string replace -r -i '^(todo|skip)\S*\s*' '' -- "$directive_part" | string trim)
+                        # Unescape the directive reason
+                        set directive_reason (_unescape_tap "$directive_reason")
+                    else
+                        # Unrecognized directive - keep it as part of description
+                        # Don't split, keep the whole thing
+                        set description "$test_line"
                     end
                 end
             end
@@ -325,8 +472,7 @@ function tap_reporter
             set description (string replace -r '^\s*-\s*' '' -- "$description" | string trim)
             
             # Unescape \# and \\ in description
-            set description (string replace -a '\\#' '#' -- "$description")
-            set description (string replace -a '\\\\' '\\' -- "$description")
+            set description (_unescape_tap "$description")
             
             # Handle different test states
             if test "$directive" = SKIP
@@ -340,10 +486,18 @@ function tap_reporter
                 set todo_count (math "$todo_count + 1")
                 if test $is_ok = true
                     set pass_count (math "$pass_count + 1")
-                    _println "$(_color_green "$TICK")  $(_color_dim "$description") $(_color_yellow "# TODO")" 2
+                    set --local todo_msg "$description"
+                    if test -n "$directive_reason"
+                        set todo_msg "$todo_msg ($directive_reason)"
+                    end
+                    _println "$(_color_green "$TICK")  $(_color_dim "$todo_msg") $(_color_yellow "# TODO")" 2
                 else
                     # TODO tests that fail are still considered "passing"
-                    _println "$(_color_yellow "$CROSS")  $(_color_dim "$description") $(_color_yellow "# TODO")" 2
+                    set --local todo_msg "$description"
+                    if test -n "$directive_reason"
+                        set todo_msg "$todo_msg ($directive_reason)"
+                    end
+                    _println "$(_color_yellow "$CROSS")  $(_color_dim "$todo_msg") $(_color_yellow "# TODO")" 2
                 end
             else if test $is_ok = true
                 set pass_count (math "$pass_count + 1")
@@ -364,24 +518,40 @@ function tap_reporter
         end
         
         # Parse TAP plan
-        if string match -q -r '^1\.\.' "$line"
-            set --local plan_match (string replace -r '^1\.\.([0-9]+).*' '$1' "$line")
+        if string match -q -r '^1\.\.' "$unindented_line"
+            # Check if we already have a plan
+            if test $plan_seen = true
+                _println "$(_color_red "Error: Multiple plans found")"
+                set exit_code 1
+                continue
+            end
+            
+            set plan_seen true
+            
+            # If we've seen tests already, this is a plan at the end
+            if test $test_count -gt 0
+                set plan_at_end true
+            end
+            
+            set --local plan_match (string replace -r '^1\.\.([0-9]+).*' '$1' "$unindented_line")
             if test -n "$plan_match"
                 set planned_tests $plan_match
             end
             
             # Check for skip all: 1..0
             if test "$planned_tests" -eq 0
-                set --local skip_reason (string replace -r '^1\.\.0\s*#?\s*' '' "$line" | string trim)
+                set --local skip_reason (string replace -r '^1\.\.0\s*#?\s*' '' "$unindented_line" | string trim)
+                # Unescape skip reason
+                set skip_reason (_unescape_tap "$skip_reason")
                 _println "$(_color_yellow "All tests skipped: $skip_reason")"
             end
             continue
         end
         
         # Extra output (stderr, etc) - anything else that's not recognized
-        if not string match -q '  *' "$line"; and \
-           test -n "$line"
-            _println "$(_color_yellow "$line")" 4
+        if not string match -q '  *' "$unindented_line"; and \
+           test -n "$unindented_line"
+            _println "$(_color_yellow "$unindented_line")" 4
         end
     end
     
@@ -390,19 +560,28 @@ function tap_reporter
     set --local duration (math "$finished_at - $started_at")
     
     if not test $bailed_out = true
-        _println
-        _println "$(_color_green "passed: $pass_count")  $(_color_red "failed: $fail_count")  $(_color_yellow "skipped: $skip_count")  $(_color_yellow "todo: $todo_count")  $(_color_white "of $test_count tests")  $(_color_dim "("(_format_ms $duration)")")"
-        
-        # Validate plan
-        if test $planned_tests -gt 0 -a $planned_tests -ne $test_count
+        # Check for missing plan
+        if test $plan_seen = false
             _println
-            _println "$(_color_red "Planned $planned_tests tests but ran $test_count")"
+            _println "$(_color_red "Error: No plan found")"
             set exit_code 1
         end
         
         _println
+        _println "$(_color_green "passed: $pass_count")  $(_color_red "failed: $fail_count")  $(_color_yellow "skipped: $skip_count")  $(_color_yellow "todo: $todo_count")  $(_color_white "of $test_count tests")  $(_color_dim "("(_format_ms $duration)")")"
         
-        if test $fail_count -eq 0 -a $planned_tests -eq $test_count
+        # Validate plan
+        if test $plan_seen = true
+            if test $planned_tests -gt 0 -a $planned_tests -ne $test_count
+                _println
+                _println "$(_color_red "Planned $planned_tests tests but ran $test_count")"
+                set exit_code 1
+            end
+        end
+        
+        _println
+        
+        if test $fail_count -eq 0 -a $plan_seen = true -a $planned_tests -eq $test_count -a (count $test_ids_out_of_range) -eq 0
             _println "$(_color_green "All of $test_count tests passed!")"
         else if test $fail_count -gt 0
             _println "$(_color_red "$fail_count of $test_count tests failed.")"
