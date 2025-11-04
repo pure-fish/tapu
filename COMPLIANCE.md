@@ -1,10 +1,10 @@
 # TAP Version 14 Specification Compliance
 
-This document describes the compliance status of `tap.fish` with the [TAP Version 14 specification](https://testanything.org/tap-version-14-specification.html).
+This document describes the compliance status of `tapu.fish` with the [TAP Version 14 specification](https://testanything.org/tap-version-14-specification.html).
 
 ## Status: ✅ Fully Compliant
 
-As of November 4, 2025, `tap.fish` implements all required features of the TAP14 specification.
+As of November 4, 2025, `tapu.fish` implements all required features of the TAP14 specification.
 
 ## Implemented Features
 

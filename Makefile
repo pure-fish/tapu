@@ -1,7 +1,7 @@
 .PHONY: test install clean help
 
 help:
-	@echo "tap.fish - TAP reporter for fish shell"
+	@echo "tapu - TAP reporter for fish shell"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  test      Run all tests"

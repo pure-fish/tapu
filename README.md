@@ -1,8 +1,13 @@
-# tap.fish
+# tapu
 
 > A TAP reporter based on [tap-diff](https://github.com/axross/tap-diff).
 >
 > Fully written in fish and **fully compliant** with [TAP version 14 specification][specs].
+
+From [Maori _tapu_][def] meaning _holy_ or _taboo_ (depending on your preference).
+
+![preview](./preview.png)
+
 
 ## Features
 
@@ -23,18 +28,18 @@ See [COMPLIANCE.md](COMPLIANCE.md) for detailed specification compliance informa
 
 ## Installation
 
-Uses [fisher][fisher] to install:
+Use [fisher][fisher] to install:
 
 ```fish
-fisher install pure-fish/tap.fish
+fisher install pure-fish/tapu
 ```
 
 ## Usage
 
-Pipe the output of your TAP-compliant test suite to `tap.fish`:
+Pipe the output of your TAP-compliant test suite to `tapu`:
 
 ```fish
-fishtape tests/*.fish | tap.fish
+fishtape tests/*.fish | tapu
 ```
 
 ## Development
@@ -49,3 +54,4 @@ fishtape tests/*.fish
 
 [specs]: https://testanything.org/tap-version-14-specification.html
 [fisher]: https://github.com/jorgebucaran/fisher
+[def]: https://en.wiktionary.org/wiki/tapu#Maori

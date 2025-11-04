@@ -2,10 +2,9 @@
 # TAP specification compliance tests
 # Reference: https://testanything.org/tap-version-14-specification.html
 
-set --local test_dir (dirname (realpath (status filename)))
-set --local project_root (dirname $test_dir)
+source (status dirname)/../functions/tapu.fish
+@echo (_color_blue (status filename))
 
-source $project_root/functions/tap.fish
 
 # Test TAP line formats
 @test "TAP version line format" (echo "TAP version 14") = "TAP version 14"

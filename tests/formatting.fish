@@ -1,10 +1,9 @@
 #!/usr/bin/env fish
 # Formatting function tests
 
-set --local test_dir (dirname (realpath (status filename)))
-set --local project_root (dirname $test_dir)
+source (status dirname)/../functions/tapu.fish
+@echo (_color_blue (status filename))
 
-source $project_root/functions/tap.fish
 
 @test "println outputs text" -n (_println "test message")
 

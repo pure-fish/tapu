@@ -89,7 +89,7 @@ function _format_ms
     set --local ms $argv[1]
     
     if test $ms -lt 1000
-        echo "{$ms}ms"
+        echo $ms"ms"
         return
     end
     
@@ -158,7 +158,7 @@ function _highlight_diff
 end
 
 # Main TAP parser
-function tap_reporter
+function tapu
     set --local started_at (date +%s%3N)
     set --local test_count 0
     set --local pass_count 0
@@ -594,9 +594,9 @@ function tap_reporter
     return $exit_code
 end
 
-# Only run tap_reporter if there's input from a pipe and not interactive
+# Only run tapu if there's input from a pipe and not interactive
 # This allows the module to be sourced for testing without blocking
 if not status is-interactive
     and test -p /dev/stdin
-    tap_reporter
+    tapu
 end
