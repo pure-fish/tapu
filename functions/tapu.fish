@@ -184,7 +184,7 @@ function tapu
     while read -l line
         # Calculate indentation level for subtest support
         set --local indent_count 0
-        if string match -q -r '^\s+' "$line"
+        if string match -q -r -- '^\s+' "$line"
             set indent_count (string length (string match -r '^(\s+)' "$line" | head -n 1))
             # Only treat multiples of 4 spaces as subtest indentation
             if test (math "$indent_count % 4") -eq 0
@@ -208,7 +208,7 @@ function tapu
         
         # Check for subtest comment marker at parent level
         if test $subtest_level -eq 0 -a $in_subtest = false
-            if string match -q -r '^# Subtest:' "$unindented_line"
+            if string match -q -r -- '^# Subtest:' "$unindented_line"
                 set subtest_name (string replace -r '^# Subtest:\s*' '' "$unindented_line" | string trim)
                 set in_subtest true
                 set subtest_lines
@@ -217,7 +217,7 @@ function tapu
                     _println "$(_color_blue "$subtest_name")" 1
                 end
                 continue
-            else if string match -q '^# Subtest$' "$unindented_line"
+            else if string match -q -- '^# Subtest$' "$unindented_line"
                 set subtest_name ''
                 set in_subtest true
                 set subtest_lines
@@ -231,7 +231,7 @@ function tapu
             # If we hit a non-indented line and we have subtest content, this should be the correlated test point
             if test $subtest_level -eq 0
                 # This should be the correlated test point
-                if string match -q -r '^(not )?ok' "$unindented_line"
+                if string match -q -r -- '^(not )?ok' "$unindented_line"
                     # Process the subtest lines we collected
                     # For now, we'll just validate they exist and count them
                     # A full implementation would recursively parse the subtest
@@ -241,10 +241,10 @@ function tapu
                     
                     for subtest_line in $subtest_lines
                         set --local sub_unindented (string trim -l "$subtest_line")
-                        if string match -q -r '^ok' "$sub_unindented"
+                        if string match -q -r -- '^ok' "$sub_unindented"
                             set subtest_test_count (math "$subtest_test_count + 1")
                             set subtest_pass_count (math "$subtest_pass_count + 1")
-                        else if string match -q -r '^not ok' "$sub_unindented"
+                        else if string match -q -r -- '^not ok' "$sub_unindented"
                             set subtest_test_count (math "$subtest_test_count + 1")
                             set subtest_fail_count (math "$subtest_fail_count + 1")
                         end
@@ -267,7 +267,7 @@ function tapu
         end
         
         # Handle Bail out!
-        if string match -q -r -i '^Bail out!' "$unindented_line"
+        if string match -q -r -i -- '^Bail out!' "$unindented_line"
             set --local reason (string replace -r -i '^Bail out!\s*' '' "$unindented_line" | string trim)
             # Unescape \# and \\
             set reason (_unescape_tap "$reason")
@@ -280,11 +280,11 @@ function tapu
         end
         
         # Handle YAML blocks (diagnostic info)
-        if string match -q '  ---' "$unindented_line"
+        if string match -q -- '  ---' "$unindented_line"
             set in_yaml true
             set yaml_lines
             continue
-        else if string match -q '  ...' "$unindented_line"
+        else if string match -q -- '  ...' "$unindented_line"
             set in_yaml false
             
             # Parse YAML for failure details (support common field names)
@@ -296,30 +296,30 @@ function tapu
             
             for yaml_line in $yaml_lines
                 # Handle various YAML field names
-                if string match -q '    at:*' "$yaml_line"
+                if string match -q -- '    at:*' "$yaml_line"
                     set at_line (string replace '    at: ' '' "$yaml_line")
-                else if string match -q '    actual:*' "$yaml_line"
+                else if string match -q -- '    actual:*' "$yaml_line"
                     set actual (string replace '    actual: ' '' "$yaml_line")
-                else if string match -q '    expected:*' "$yaml_line"
+                else if string match -q -- '    expected:*' "$yaml_line"
                     set expected (string replace '    expected: ' '' "$yaml_line")
-                else if string match -q '    message:*' "$yaml_line"
+                else if string match -q -- '    message:*' "$yaml_line"
                     set message (string replace '    message: ' '' "$yaml_line" | string trim -c '\'"')
-                else if string match -q '    severity:*' "$yaml_line"
+                else if string match -q -- '    severity:*' "$yaml_line"
                     set severity (string replace '    severity: ' '' "$yaml_line")
                 # Also support 'got' and 'want' or 'wanted'
-                else if string match -q '      got:*' "$yaml_line"
+                else if string match -q -- '      got:*' "$yaml_line"
                     set actual (string replace '      got: ' '' "$yaml_line")
-                else if string match -q '      expect:*' "$yaml_line"
+                else if string match -q -- '      expect:*' "$yaml_line"
                     set expected (string replace '      expect: ' '' "$yaml_line")
-                else if string match -q '      wanted:*' "$yaml_line"
+                else if string match -q -- '      wanted:*' "$yaml_line"
                     set expected (string replace '      wanted: ' '' "$yaml_line")
                 # Handle file/line in 'at' block
-                else if string match -q '      file:*' "$yaml_line"
+                else if string match -q -- '      file:*' "$yaml_line"
                     set --local file (string replace '      file: ' '' "$yaml_line")
                     if test -z "$at_line"
                         set at_line "$file"
                     end
-                else if string match -q '      line:*' "$yaml_line"
+                else if string match -q -- '      line:*' "$yaml_line"
                     set --local line_num (string replace '      line: ' '' "$yaml_line")
                     if test -n "$at_line"
                         set at_line "$at_line:$line_num"
@@ -351,26 +351,26 @@ function tapu
         end
         
         # Parse TAP version
-        if string match -q -r '^TAP version' "$unindented_line"
+        if string match -q -r -- '^TAP version' "$unindented_line"
             # Just skip version line, don't display it
             continue
         end
         
         # Parse TAP comment (test name or subtest marker)
-        if string match -q '# *' "$unindented_line"
+        if string match -q -- '# *' "$unindented_line"
             set current_test (string replace '# ' '' "$unindented_line" | string trim)
             
             # Skip summary comments (fishtape adds these)
-            if string match -q 'tests *' "$current_test"; or \
-               string match -q 'pass *' "$current_test"; or \
-               string match -q 'fail *' "$current_test"; or \
-               string match -q 'ok' "$current_test"
+            if string match -q -- 'tests *' "$current_test"; or \
+               string match -q -- 'pass *' "$current_test"; or \
+               string match -q -- 'fail *' "$current_test"; or \
+               string match -q -- 'ok' "$current_test"
                 continue
             end
             
             # Check if it's a Subtest marker
-            if string match -q 'Subtest:*' "$current_test"; or \
-               string match -q 'Subtest' "$current_test"
+            if string match -q -- 'Subtest:*' "$current_test"; or \
+               string match -q -- 'Subtest' "$current_test"
                 # For now, just print it as a section header
                 set current_test (string replace 'Subtest: ' '' "$current_test" | string replace 'Subtest' '' | string trim)
                 if test -n "$current_test"
@@ -386,7 +386,7 @@ function tapu
         end
         
         # Parse TAP ok/not ok lines
-        if string match -q -r '^ok' "$unindented_line"; or string match -q -r '^not ok' "$unindented_line"
+        if string match -q -r -- '^ok' "$unindented_line"; or string match -q -r -- '^not ok' "$unindented_line"
             # Check if plan already seen and this is after end plan
             if test $plan_at_end = true
                 _println "$(_color_red "Error: Test point after final plan")"
@@ -395,14 +395,14 @@ function tapu
             
             set test_count (math "$test_count + 1")
             
-            set --local is_ok (string match -q -r '^ok' "$unindented_line"; and echo true; or echo false)
+            set --local is_ok (string match -q -r -- '^ok' "$unindented_line"; and echo true; or echo false)
             
             # Remove leading "ok" or "not ok" and optional number
             set --local test_line (string replace -r '^(not )?ok( [0-9]+)?' '' "$unindented_line" | string trim)
             
             # Extract test ID if present
             set --local test_id ''
-            if string match -q -r '^(not )?ok [0-9]+' "$unindented_line"
+            if string match -q -r -- '^(not )?ok [0-9]+' "$unindented_line"
                 set test_id (string replace -r '^(not )?ok ([0-9]+).*' '$2' "$unindented_line")
                 
                 # Check for duplicate test IDs
@@ -437,7 +437,7 @@ function tapu
             set temp_line (string replace -a '\\#' '\x01' -- "$temp_line")
             
             # Now look for ' # ' pattern (space-hash-space)
-            if string match -q '* # *' -- "$temp_line"
+            if string match -q -- '* # *' -- "$temp_line"
                 set found_directive true
                 # Split on the first ' # ' in the temp line to find position
                 set --local parts (string split -m 1 ' # ' -- "$temp_line")
@@ -451,9 +451,9 @@ function tapu
                     # Check for TODO or SKIP at start (case insensitive)
                     if string match -q -r -i '^(todo|skip)' -- "$directive_part"
                         # Extract directive type (TODO or SKIP)
-                        if string match -q -i 'todo*' -- "$directive_part"
+                        if string match -q -i -- 'todo*' -- "$directive_part"
                             set directive 'TODO'
-                        else if string match -q -i 'skip*' -- "$directive_part"
+                        else if string match -q -i -- 'skip*' -- "$directive_part"
                             set directive 'SKIP'
                         end
                         # Extract reason after TODO/SKIP\S*\s+
@@ -518,7 +518,7 @@ function tapu
         end
         
         # Parse TAP plan
-        if string match -q -r '^1\.\.' "$unindented_line"
+        if string match -q -r -- '^1\.\.' "$unindented_line"
             # Check if we already have a plan
             if test $plan_seen = true
                 _println "$(_color_red "Error: Multiple plans found")"
@@ -549,7 +549,7 @@ function tapu
         end
         
         # Extra output (stderr, etc) - anything else that's not recognized
-        if not string match -q '  *' "$unindented_line"; and \
+        if not string match -q -- '  *' "$unindented_line"; and \
            test -n "$unindented_line"
             _println "$(_color_yellow "$unindented_line")" 4
         end
