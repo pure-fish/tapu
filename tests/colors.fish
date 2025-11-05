@@ -1,7 +1,8 @@
 #!/usr/bin/env fish
 # Color function tests
 
-source (status dirname)/../functions/tapu.fish
+set --local project_root (dirname (dirname (realpath (status filename))))
+source $project_root/functions/_tapu_colors.fish
 @echo (_color_blue (status filename))
 
 # Test color functions: output, text preservation, and ANSI codes

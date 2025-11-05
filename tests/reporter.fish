@@ -1,7 +1,8 @@
 #!/usr/bin/env fish
 # Main reporter function tests
 
-source (status dirname)/../functions/tapu.fish
+set --local project_root (dirname (dirname (realpath (status filename))))
+source $project_root/functions/_tapu_reporter.fish
 @echo (_color_blue (status filename))
 
 

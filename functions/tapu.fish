@@ -4,11 +4,11 @@
 
 # Load all helper modules
 set --local module_dir (dirname (realpath (status filename)))
-source $module_dir/colors.fish
-source $module_dir/formatting.fish
-source $module_dir/tapu_yaml.fish
-source $module_dir/tapu_test.fish
-source $module_dir/tapu_reporter.fish
+source $module_dir/_tapu_colors.fish
+source $module_dir/_tapu_formatting.fish
+source $module_dir/_tapu_yaml.fish
+source $module_dir/_tapu_test.fish
+source $module_dir/_tapu_reporter.fish
 
 set --export INDENT '  '
 set --export TICK '✔'

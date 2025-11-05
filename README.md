@@ -1,13 +1,12 @@
 # tapu
 
-> A TAP reporter based on [tap-diff](https://github.com/axross/tap-diff).
+> A TAP reporter port on [tap-diff](https://github.com/axross/tap-diff).
 >
 > Fully written in fish and **fully compliant** with [TAP version 14 specification][specs].
 
 From [Maori _tapu_][def] meaning _holy_ or _taboo_ (depending on your preference).
 
 ![preview](./preview.png)
-
 
 ## Features
 
