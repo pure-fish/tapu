@@ -3,6 +3,7 @@
 # Reference: https://testanything.org/tap-version-14-specification.html#plan
 
 set --local project_root (dirname (dirname (realpath (status filename))))
+source $project_root/functions/_tapu_plan_validation.fish
 source $project_root/functions/tapu.fish
 @echo (_color_blue (status filename))
 

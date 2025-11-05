@@ -3,6 +3,7 @@
 # Reference: https://testanything.org/tap-version-14-specification.html#escaping
 
 set --local project_root (dirname (dirname (realpath (status filename))))
+source $project_root/functions/_tapu_escaping.fish
 source $project_root/functions/tapu.fish
 @echo (_color_blue (status filename))
 
