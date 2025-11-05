@@ -37,10 +37,46 @@ function _format_ms
         set minutes (math "$minutes % 60")
         set seconds (math "$seconds % 60")
         echo "{$hours}h {$minutes}m {$seconds}s"
-    else if test $minutes -gt 0
+    else if test "$minutes" -gt 0
         set seconds (math "$seconds % 60")
         echo "{$minutes}m {$seconds}s"
     else
         echo "{$seconds}s"
     end
+end
+
+function _highlight_diff
+    set --local actual "$argv[1]"
+    set --local expected "$argv[2]"
+    
+    if test "$actual" = "$expected"
+        echo "Actual/Expected: $actual"; return
+    end
+    
+    echo -n "Actual:   "
+    set --local actual_len (string length -- "$actual")
+    set --local expected_len (string length -- "$expected")
+    
+    for i in (seq 1 $actual_len)
+        set --local actual_char (string sub -s $i -l 1 -- "$actual")
+        set --local expected_char (string sub -s $i -l 1 -- "$expected")
+        if test "$actual_char" != "$expected_char"
+            set_color -b red; echo -n "$actual_char"; set_color normal
+        else
+            echo -n "$actual_char"
+        end
+    end
+    echo
+    
+    echo -n "Expected: "
+    for i in (seq 1 $expected_len)
+        set --local actual_char (string sub -s $i -l 1 -- "$actual")
+        set --local expected_char (string sub -s $i -l 1 -- "$expected")
+        if test "$actual_char" != "$expected_char"
+            set_color -b green; echo -n "$expected_char"; set_color normal
+        else
+            echo -n "$expected_char"
+        end
+    end
+    echo
 end
