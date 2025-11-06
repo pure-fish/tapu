@@ -4,7 +4,9 @@
 >
 > Fully written in fish and **fully compliant** with [TAP version 14 specification][specs].
 
-From [Maori _tapu_][def] meaning _holy_ or _taboo_ (depending on your preference).
+> :speech_balloon: The name come from [Maori's _tapu_][def], meaning _holy_ or _taboo_ (depending on your preference ;)).
+
+:robot: _This code was generated with the help of AI._
 
 ![preview](./preview.png)
 
@@ -50,6 +52,7 @@ fishtape tests/*.fish
 ```
 
 ## [MIT](LICENSE) License
+
 
 [specs]: https://testanything.org/tap-version-14-specification.html
 [fisher]: https://github.com/jorgebucaran/fisher
