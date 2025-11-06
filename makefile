@@ -13,13 +13,23 @@ SHELL := /usr/bin/env fish
 test:
 	fishtape tests/*.fish
 
-ci:
+ci: passing-tests failing-tests
+
+passing-tests:
 	docker run \
 		--rm \
 		--volume=$$(pwd):/workspace \
 		--workdir=/workspace \
 		purefish/docker-fish:4.0.2 \
-		fish -c 'fishtape tests/*.fish | ./functions/tapu.fish'
+		fish -c 'fishtape tests/*.test.fish | ./functions/tapu.fish'
+		
+failing-tests:
+	docker run \
+		--rm \
+		--volume=$$(pwd):/workspace \
+		--workdir=/workspace \
+		purefish/docker-fish:4.0.2 \
+		fish -c 'fishtape tests/*.test-failure.fish | ./functions/tapu.fish'
 
 install:
 	fisher install jorgebucaran/fishtape
