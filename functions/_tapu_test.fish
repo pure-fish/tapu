@@ -5,15 +5,15 @@ function _parse_test_line
     set --local unindented_line $argv[1]
     set --local directive ''
     set --local directive_reason ''
-    set --local description (string replace -r '^(not )?ok( [0-9]+)?' '' "$unindented_line" | string trim)
+    set --local description (string replace -r '^(not )?ok( [0-9]+)?' '' "$unindented_line")
     
     # Extract directive (TODO/SKIP) - only if preceded by #
     if string match -q '*#*' -- "$description"
-        # Check if there's a directive marker
-        if string match -q -r -- '(.*)#\s*(TODO|SKIP|todo|skip|Todo|Skip)(.*)' -- "$description"
+        # Check if there's a directive marker with proper spacing (case-insensitive)
+        if string match -q -r -i -- '\s#\s*(todo|skip)' -- "$description"
             set --local parts (string split -m 1 ' # ' -- "$description")
             if test (count $parts) -eq 2
-                set --local desc_part "$parts[1]"
+                set --local desc_part (string trim "$parts[1]")
                 set --local directive_part "$parts[2]"
                 
                 if string match -q -r -i -- '^(todo|skip)' -- "$directive_part"
@@ -25,6 +25,20 @@ function _parse_test_line
                     set directive_reason (string replace -r -i '^(todo|skip)\S*\s*' '' -- "$directive_part" | string trim)
                     set directive_reason (_unescape_tap "$directive_reason")
                     set description "$desc_part"
+                end
+            else if test (count $parts) -eq 1
+                # Handle case where description is empty (starts with #)
+                set --local trimmed (string trim "$description")
+                if string match -q -r -i -- '^#\s*(todo|skip)' -- "$trimmed"
+                    set --local directive_part (string replace -r '^#\s*' '' -- "$trimmed")
+                    if string match -q -i 'todo*' -- "$directive_part"
+                        set directive 'TODO'
+                    else if string match -q -i 'skip*' -- "$directive_part"
+                        set directive 'SKIP'
+                    end
+                    set directive_reason (string replace -r -i '^(todo|skip)\S*\s*' '' -- "$directive_part" | string trim)
+                    set directive_reason (_unescape_tap "$directive_reason")
+                    set description ''
                 end
             end
         end
@@ -47,27 +61,23 @@ function _output_test_result
     set --local directive_reason $argv[3]
     set --local description $argv[4]
     
+    # Use "undefined" for tests without description (like tap-diff)
+    test -z "$description" && set description "undefined"
+    
     if test "$directive" = SKIP
-        set --local skip_msg "$description"
-        test -n "$directive_reason" && set skip_msg "$skip_msg ($directive_reason)"
-        _println "$(_color_dim "$TICK")  $(_color_dim "$skip_msg") $(_color_yellow "# SKIP")" 2
+        # SKIP tests shown without reason (like tap-diff)
+        _println "$(_color_dim "$TICK")  $(_color_dim "$description")" 2
     else if test "$directive" = TODO
         if test $is_ok = true
-            set --local todo_msg "$description"
-            test -n "$directive_reason" && set todo_msg "$todo_msg ($directive_reason)"
-            _println "$(_color_green "$TICK")  $(_color_dim "$todo_msg") $(_color_yellow "# TODO")" 2
+            # Passing TODO - shown without reason (like tap-diff)
+            _println "$(_color_green "$TICK")  $(_color_dim "$description")" 2
         else
-            set --local todo_msg "$description"
-            test -n "$directive_reason" && set todo_msg "$todo_msg ($directive_reason)"
-            _println "$(_color_yellow "$CROSS")  $(_color_dim "$todo_msg") $(_color_yellow "# TODO")" 2
+            # Failing TODO - shown without reason (like tap-diff)
+            _println "$(_color_yellow "$CROSS")  $(_color_dim "$description")" 2
         end
     else if test $is_ok = true
-        test -n "$description" && _println "$(_color_green "$TICK")  $(_color_dim "$description")" 2
+        _println "$(_color_green "$TICK")  $(_color_dim "$description")" 2
     else
-        if test -n "$description"
-            _println "$(_color_red "$CROSS")  $(_color_red "$description")" 2
-        else
-            _println "$(_color_red "$CROSS")  $(_color_red "test failed")" 2
-        end
+        _println "$(_color_red "$CROSS")  $(_color_red "$description")" 2
     end
 end
