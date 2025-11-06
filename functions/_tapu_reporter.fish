@@ -17,14 +17,40 @@ function tapu
     set --local last_comment ''
     set --local seen_test_ids
     set --local tests_after_plan false
+    set --local pending_test_output false
+    set --local pending_is_ok ''
+    set --local pending_directive ''
+    set --local pending_directive_reason ''
+    set --local pending_description ''
+    set --local yaml_location ''
+    set --local yaml_actual ''
+    set --local yaml_expected ''
     
     while read -l line
+        # Check YAML state first before any filtering
+        set --local unindented_line (string trim -l "$line")
+        
+        # Handle YAML blocks (must be before subtest filtering)
+        if string match -q -- '---' "$unindented_line"
+            set in_yaml true; set yaml_lines; continue
+        else if string match -q -- '...' "$unindented_line"
+            set in_yaml false
+            # Parse YAML and store for the pending test output
+            set --local yaml_result (_parse_yaml_block $yaml_lines)
+            set yaml_location (echo $yaml_result | cut -d'|' -f1)
+            set yaml_actual (echo $yaml_result | cut -d'|' -f2)
+            set yaml_expected (echo $yaml_result | cut -d'|' -f3)
+            continue
+        end
+        
+        if test $in_yaml = true
+            set -a yaml_lines "$line"; continue
+        end
+        
         # Skip subtests (4+ space indented lines)
         if string match -q -r -- '^    ' "$line"
             continue
         end
-        
-        set --local unindented_line (string trim -l "$line")
         
         # Handle Bail out!
         if string match -q -r -i -- '^Bail out!' "$unindented_line"
@@ -32,19 +58,6 @@ function tapu
             set reason (_unescape_tap "$reason")
             _println; _println "$(_color_red "Bail out!") $reason"; _println
             return 1
-        end
-        
-        # Handle YAML blocks
-        if string match -q -- '  ---' "$unindented_line"
-            set in_yaml true; set yaml_lines; continue
-        else if string match -q -- '  ...' "$unindented_line"
-            set in_yaml false
-            _parse_yaml_block $yaml_lines
-            continue
-        end
-        
-        if test $in_yaml = true
-            set -a yaml_lines "$line"; continue
         end
         
         # Handle comments (file headers)
@@ -72,6 +85,15 @@ function tapu
         
         # Parse test lines
         if string match -q -r -- '^ok' "$unindented_line"; or string match -q -r -- '^not ok' "$unindented_line"
+            # Output any pending test first (if we have one waiting)
+            if test "$pending_test_output" = true
+                _output_test_result $pending_is_ok "$pending_directive" "$pending_directive_reason" "$pending_description" "$yaml_location" "$yaml_actual" "$yaml_expected"
+                set pending_test_output false
+                set yaml_location ''
+                set yaml_actual ''
+                set yaml_expected ''
+            end
+            
             # Check if test appears after final plan
             if test $plan_seen = true -a $plan_at_end = true
                 _println "$(_color_red "Error: Test found after final plan")"
@@ -121,7 +143,12 @@ function tapu
                 set exit_code 1
             end
             
-            _output_test_result $is_ok "$directive" "$directive_reason" "$description"
+            # Store test info to output later (in case YAML follows)
+            set pending_test_output true
+            set pending_is_ok $is_ok
+            set pending_directive "$directive"
+            set pending_directive_reason "$directive_reason"
+            set pending_description "$description"
             continue
         end
         
@@ -147,6 +174,11 @@ function tapu
             end
             continue
         end
+    end
+    
+    # Output any pending test at the end
+    if test "$pending_test_output" = true
+        _output_test_result $pending_is_ok "$pending_directive" "$pending_directive_reason" "$pending_description" "$yaml_location" "$yaml_actual" "$yaml_expected"
     end
     
     # Plan validation

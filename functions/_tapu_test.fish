@@ -60,24 +60,40 @@ function _output_test_result
     set --local directive $argv[2]
     set --local directive_reason $argv[3]
     set --local description $argv[4]
+    set --local location $argv[5]
+    set --local actual $argv[6]
+    set --local expected $argv[7]
     
     # Use "undefined" for tests without description (like tap-diff)
     test -z "$description" && set description "undefined"
     
     if test "$directive" = SKIP
         # SKIP tests shown without reason (like tap-diff)
-        _println "$(_color_dim "$TICK")  $(_color_dim "$description")" 2
+        _println "$(_color_dim "$TICK")  $description" 2
     else if test "$directive" = TODO
         if test $is_ok = true
             # Passing TODO - shown without reason (like tap-diff)
-            _println "$(_color_green "$TICK")  $(_color_dim "$description")" 2
+            _println "$(_color_green "$TICK")  $description" 2
         else
             # Failing TODO - shown without reason (like tap-diff)
-            _println "$(_color_yellow "$CROSS")  $(_color_dim "$description")" 2
+            _println "$(_color_yellow "$CROSS")  $description" 2
         end
     else if test $is_ok = true
-        _println "$(_color_green "$TICK")  $(_color_dim "$description")" 2
+        _println "$(_color_green "$TICK")  $description" 2
     else
-        _println "$(_color_red "$CROSS")  $(_color_red "$description")" 2
+        # Failed test - show location inline and actual/expected on next line
+        if test -n "$location"
+            _println "$(_color_red "$CROSS")  $description at "$(_color_magenta "$location") 2
+        else
+            _println "$(_color_red "$CROSS")  $description" 2
+        end
+        
+        # Show actual vs expected on the next line with highlighting
+        if test -n "$actual" -a -n "$expected"
+            # Highlight the actual value (magenta) vs expected (dim)
+            set --local colored_actual (_highlight_red "$actual")
+            set --local colored_expected (_highlight_green "$expected")
+            _println "$colored_actual$colored_expected" 4
+        end
     end
 end

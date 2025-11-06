@@ -13,6 +13,14 @@ SHELL := /usr/bin/env fish
 test:
 	fishtape tests/*.fish
 
+ci:
+	docker run \
+		--rm \
+		--volume=$$(pwd):/workspace \
+		--workdir=/workspace \
+		purefish/docker-fish:4.0.2 \
+		fish -c 'fishtape tests/*.fish | ./functions/tapu.fish'
+
 install:
 	fisher install jorgebucaran/fishtape
 

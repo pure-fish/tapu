@@ -32,13 +32,7 @@ function _parse_yaml_block
         end
     end
     
-    # Print failure details
-    test -n "$message" && _println "$(_color_yellow "  $message")" 2
-    test -n "$at_line" && _println "$(_color_dim "  at: $at_line")" 2
-    
-    if test -n "$expected" -a -n "$actual"
-        _println "" 2
-        _println "$(_color_red "  Expected: $expected")" 2
-        _println "$(_color_red "  Actual:   $actual")" 2
-    end
+    # Return the location and values for inline display
+    # The caller will format them appropriately
+    echo "$at_line|$actual|$expected"
 end

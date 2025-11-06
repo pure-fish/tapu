@@ -13,5 +13,5 @@ for color in $colors
     
     @test "$color outputs" -n "$output"
     @test "$color contains text" (string match -q '*test*' "$output"; echo $status) -eq 0
-    @test "$color has ANSI codes" (echo "$output" | xxd | grep -q '1b 5b'; echo $status) -eq 0
+    @test "$color has ANSI codes" (printf "%s" "$output" | xxd | grep -q '1b5b'; echo $status) -eq 0
 end
