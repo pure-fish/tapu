@@ -2,10 +2,8 @@
 # TAP specification compliance tests
 # Reference: https://testanything.org/tap-version-14-specification.html
 
-set --local project_root (dirname (dirname (realpath (status filename))))
-source $project_root/functions/_tapu_specification.fish
-source $project_root/functions/_tapu_tapu.fish
-@echo (_color_blue (status filename))
+source (status dirname)/../functions/_tapu_specification.fish
+@echo (set_color blue)(status filename)(set_color normal)
 
 
 # Test TAP line formats

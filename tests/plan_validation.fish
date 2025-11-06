@@ -2,10 +2,8 @@
 # TAP specification plan validation tests
 # Reference: https://testanything.org/tap-version-14-specification.html#plan
 
-set --local project_root (dirname (dirname (realpath (status filename))))
-source $project_root/functions/_tapu_plan_validation.fish
-source $project_root/functions/tapu.fish
-@echo (_color_blue (status filename))
+source (status dirname)/../functions/_tapu_plan_validation.fish
+@echo (set_color blue)(status filename)(set_color normal)
 
 
 # Test plan at beginning

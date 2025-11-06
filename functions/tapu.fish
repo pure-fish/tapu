@@ -10,10 +10,6 @@ source $module_dir/_tapu_yaml.fish
 source $module_dir/_tapu_test.fish
 source $module_dir/_tapu_reporter.fish
 
-set --export INDENT '  '
-set --export TICK '✔'
-set --export CROSS '✖'
-
 # Only run tapu if there's input from a pipe and not interactive
 if not status is-interactive
     and test -p /dev/stdin

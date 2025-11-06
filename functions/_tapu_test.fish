@@ -7,12 +7,13 @@ function _parse_test_line
     set --local directive_reason ''
     set --local description (string replace -r '^(not )?ok( [0-9]+)?' '' "$unindented_line" | string trim)
     
-    # Extract directive (TODO/SKIP)
+    # Extract directive (TODO/SKIP) - only if preceded by #
     if string match -q '*#*' -- "$description"
-        if string match -q '* # *' -- "$description"
+        # Check if there's a directive marker
+        if string match -q -r -- '(.*)#\s*(TODO|SKIP|todo|skip|Todo|Skip)(.*)' -- "$description"
             set --local parts (string split -m 1 ' # ' -- "$description")
             if test (count $parts) -eq 2
-                set description "$parts[1]"
+                set --local desc_part "$parts[1]"
                 set --local directive_part "$parts[2]"
                 
                 if string match -q -r -i -- '^(todo|skip)' -- "$directive_part"
@@ -23,8 +24,7 @@ function _parse_test_line
                     end
                     set directive_reason (string replace -r -i '^(todo|skip)\S*\s*' '' -- "$directive_part" | string trim)
                     set directive_reason (_unescape_tap "$directive_reason")
-                else
-                    set description (string replace -r '^\s*-\s*' '' -- "$description" | string trim)
+                    set description "$desc_part"
                 end
             end
         end
@@ -33,11 +33,15 @@ function _parse_test_line
     set description (string replace -r '^\s*-\s*' '' -- "$description" | string trim)
     set description (_unescape_tap "$description")
     
-    # Return as space-separated string (will be split by caller)
+    # Return as pipe-separated string (will be split by caller)
     echo "$directive|$directive_reason|$description"
 end
 
 function _output_test_result
+    set --export INDENT '  '
+    set --export TICK '✔'
+    set --export CROSS '✖'
+
     set --local is_ok $argv[1]
     set --local directive $argv[2]
     set --local directive_reason $argv[3]

@@ -18,7 +18,7 @@ function tapu
         set --local unindented_line (string trim -l "$line")
         
         # Handle Bail out!
-        if string match -q -r -- -i -- '^Bail out!' "$unindented_line"
+        if string match -q -r -i -- '^Bail out!' "$unindented_line"
             set --local reason (string replace -r -i '^Bail out!\s*' '' "$unindented_line" | string trim)
             set reason (_unescape_tap "$reason")
             _println; _println "$(_color_red "Bail out!") $reason"; _println
@@ -75,12 +75,23 @@ function tapu
             set plan_seen true
             set --local plan_match (string replace -r '^1\.\.([0-9]+).*' '$1' "$unindented_line")
             test -n "$plan_match" && set planned_tests $plan_match
+            
+            # Check for skip reason in plan (1..0 # skip reason)
+            if test "$planned_tests" -eq 0
+                and string match -q '*#*' -- "$unindented_line"
+                set --local skip_reason (string replace -r '^1\.\.0\s*#\s*(?:skip\s*)?' '' "$unindented_line" | string trim)
+                if test -n "$skip_reason"
+                    set skip_reason (_unescape_tap "$skip_reason")
+                    _println "$(_color_yellow "Skipped:") $skip_reason"
+                end
+            end
             continue
         end
     end
     
     # Summary
-    set --local duration (math "(date +%s%3N) - $started_at")
+    set --local ended_at (date +%s%3N)
+    set --local duration (math "$ended_at - $started_at")
     _println
     _println "$(_color_green "passed: $pass_count")  $(_color_red "failed: $fail_count")  $(_color_yellow "skipped: $skip_count")  $(_color_yellow "todo: $todo_count")  $(_color_white "of $test_count tests")  $(_color_dim "("(_format_ms $duration)")")"
     _println

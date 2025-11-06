@@ -2,10 +2,9 @@
 # TAP specification escaping tests
 # Reference: https://testanything.org/tap-version-14-specification.html#escaping
 
-set --local project_root (dirname (dirname (realpath (status filename))))
-source $project_root/functions/_tapu_escaping.fish
-source $project_root/functions/tapu.fish
-@echo (_color_blue (status filename))
+source (status dirname)/../functions/_tapu_escaping.fish
+source (status dirname)/../functions/tapu.fish
+@echo (set_color blue)(status filename)(set_color normal)
 
 
 # Test escaping in descriptions
