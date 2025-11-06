@@ -2,15 +2,22 @@
 
 * work in English
 
+## Dev environment tips
+
+* use `fish` as your default shell for development and testing ;
+* when working with `fish` projects,
+  * use `fisher` to manage fish plugins ;
+  * use `fishtape` as test runner.
+  * When tests pass, run them again in `purefish/docker-fish` container to ensure compatibility ;
+
 ## Setup commands
 
-* use `make` to build and test the project locally on different environments ;
-* use `make` to test and build the documentation
+* use `make` tasks to dev on the project, so local and CI environments are similar ;
+* use `docker` container to isolate from host environment and have consistent testing environment ;
 
 ## Code style
 
-* Fish shell language ;
-* KISS principles ;
+* follow KISS principles ;
 * Avoid external dependencies where possible
 * use commit conventions to generate changelogs and releases
 * write tests for new features and bug fixes
